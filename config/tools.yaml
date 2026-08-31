@@ -1,0 +1,19 @@
+# Tool registry (M3+). Models propose tool calls; the brain validates and
+# executes. Each tool: name, description (shown to the LLM),
+# policy (auto | ask | deny), and a handler id implemented in vr_brain.
+# Future physical actuators plug in here as ROS2 service/action-backed
+# tools (M5).
+tools:
+  - name: get_time
+    handler: get_time
+    policy: auto
+    description: "Get the current local date and time."
+  - name: calculate
+    handler: calculate
+    policy: auto
+    description: "Evaluate an arithmetic expression and return the result."
+  - name: web_search
+    handler: web_search
+    policy: auto
+    description: "Search the web via DuckDuckGo and return top results."
+    max_results: 5

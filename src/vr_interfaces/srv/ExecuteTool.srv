@@ -1,0 +1,9 @@
+# Brain-side tool execution. Models propose; the brain validates against the
+# registry, applies the per-tool policy, and returns the outcome.
+string tool_name
+string params_json
+---
+string result_json
+bool approved
+bool success
+string error

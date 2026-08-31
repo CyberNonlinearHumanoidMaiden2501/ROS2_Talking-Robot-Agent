@@ -1,0 +1,20 @@
+# DeepSeek cloud LLM configuration (M2+).
+base_url: "https://api.deepseek.com"
+# Key is read at runtime, in priority order:
+#   1. DEEPSEEK_API_KEY env var
+#   2. contents of api_key_file
+api_key_file: "/home/phalanx/deepseek-api-key"
+
+fast_model: "deepseek-v4-flash"        # conversation, no reasoning (System 1)
+reasoning_model: "deepseek-v4-pro"     # tool use + deep reasoning (System 2)
+# deepseek-v4-flash-vision-exp is also on the account; future use for camera
+# tools once physical perception arrives (M5).
+
+fast:
+  max_tokens: 1024
+  temperature: 0.8
+  timeout_s: 60
+reasoning:
+  max_tokens: 8192
+  temperature: 0.6
+  timeout_s: 300

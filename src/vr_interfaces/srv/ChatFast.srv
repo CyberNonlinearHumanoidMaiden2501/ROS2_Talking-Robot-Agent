@@ -1,0 +1,9 @@
+# Fast (System 1) LLM chat. The brain assembles the full payload (persona
+# system prompt + conversation history + new user turn) so the node stays
+# a stateless adapter.
+string payload_json   # OpenAI-style messages array + options
+---
+string reply_text
+string tool_call_json # '{}' when no tool call (e.g. the escalate call)
+bool success
+string error

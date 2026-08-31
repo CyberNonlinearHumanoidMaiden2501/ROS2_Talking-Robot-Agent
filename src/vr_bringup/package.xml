@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>vr_bringup</name>
+  <version>0.1.0</version>
+  <description>Launch files for the vocal-robot stack</description>
+  <maintainer email="yutsin2501@gmail.com">Qingyu Geng</maintainer>
+  <license>MIT</license>
+
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>vr_audio</exec_depend>
+  <exec_depend>vr_asr</exec_depend>
+  <exec_depend>vr_tts</exec_depend>
+  <exec_depend>vr_llm</exec_depend>
+  <exec_depend>vr_brain</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

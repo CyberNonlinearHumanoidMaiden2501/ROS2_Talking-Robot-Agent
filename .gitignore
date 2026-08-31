@@ -1,0 +1,28 @@
+# Python / venv
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# ROS2 colcon
+build/
+install/
+log/
+
+# Secrets
+.env
+deepseek-api-key
+*.key
+
+# Models & media (large, downloaded at runtime)
+models/
+samples/
+*.wav
+*.mp3
+
+# Editor
+.vscode/
+.idea/
+
+# ZCode session metadata
+.zcode/

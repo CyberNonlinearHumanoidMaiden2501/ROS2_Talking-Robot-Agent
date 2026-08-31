@@ -1,0 +1,8 @@
+# TTS: text -> PCM samples. The engine is chosen by the tts_node config.
+string text
+string voice          # engine voice id; empty = engine default
+float32 speed         # 1.0 = normal
+string engine         # optional override: kokoro | sovits | orpheus; empty = config default
+---
+int16[] samples
+int32 sample_rate     # engines may synthesize at different rates (Kokoro: 24 kHz)
