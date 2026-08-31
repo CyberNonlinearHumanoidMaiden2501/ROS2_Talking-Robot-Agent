@@ -54,7 +54,8 @@ Five logical nodes; models are stateless adapters, the brain owns all state:
 **M0 — Toolchain & skeleton.** ✅ done — commit `20f882d`.
 Install colcon/rosdep/ffmpeg/portaudio19-dev via `install_sudo.sh` (needs sudo). Venv via uv with `--system-site-packages` so it sees system ROS2 deps (lark) after sourcing `/opt/ros/jazzy/setup.bash` (PEP 668 forbids system pip). Git init + repo-local identity + `.gitignore` + initial commit; workspace skeleton; interfaces build. *Verified: colcon build passes, launch file starts all nodes as stubs.*
 
-**M1 — Voice I/O.** Audio capture/playback; mic smoke test first (the USB input exposes only an IEC958 digital node — if it's dead, we re-profile via wpctl or you plug a different mic). Silero VAD + faster-whisper (small int8, GPU) transcribing; Kokoro speaking. Enable PipeWire echo-cancel for barge-in; fallback = duck mode (no barge-in) until AEC works. *Verify: speak en + zh → correct transcripts; text → audible speech.*
+**M1 — Voice I/O.** ✅ implemented; owner physical tests pending (see TEST_REPORT.md).
+Audio capture/playback (sounddevice via PipeWire "default" routing, mock mode for dev); Silero VAD + faster-whisper medium (CUDA int8) transcribing en/zh; Kokoro TTS (en repo + v1.1-zh repo, af_heart/zf_001); Play action with exact truncation reporting; duck mode. Dev-verified: VAD segmentation, TTS→ASR round-trip (en 1.00 / zh 0.81 similarity), playback truncation math, mock-mode full-stack launch. Remaining: owner confirms mic transcripts and speaker audio.
 
 **M2 — Conversation core.** Brain state machine + fast LLM + persona.yaml + conversation store; always-on trigger; barge-in with as-spoken truncation recording; bilingual replies. *Verify: natural full-loop conversation with the persona; interrupt mid-sentence and confirm the context reflects what was actually heard.*
 

@@ -1,19 +1,24 @@
-# Audio hardware + voice-activity settings (M1+).
-# Input: PDP Audio Device USB mic (mono-fallback) — verified capturing
-# 2026-08-31 (system default source). The old USB device only exposes an
-# IEC958 digital input and is NOT used.
+# Audio hardware + voice-activity settings.
+# Live audio goes through the PipeWire default source/sink ("default" ALSA PCM
+# via pipewire-alsa), so WirePlumber routes to the PDP mic / system speaker
+# without "device busy" conflicts. When echo-cancel is enabled, its virtual
+# source/sink become the defaults and capture follows automatically.
 sample_rate: 16000
 channels: 1
-block_ms: 30
+block_ms: 32           # silero VAD consumes exactly 512-sample (32 ms) blocks
 
-input_device: "alsa_input.usb-Performance_Designed_Products_PDP_Audio_Device-00.mono-fallback"
-output_device: "alsa_output.usb-Generic_USB_Audio-00.analog-stereo"
+input_device: "default"
+output_device: "default"
+
+# true = do not open mic/speaker (developer dry-run; also env VOCAL_ROBOT_MOCK_AUDIO=1)
+mock_audio: false
 
 vad:
   threshold: 0.5          # Silero speech probability
   min_speech_ms: 250      # ignore shorter bursts (noise)
   end_silence_ms: 600     # silence after which an utterance is finalized
+  max_utterance_ms: 30000 # auto-finalize runaway utterances
 
-# duck: attenuate/mute mic while speaking (no barge-in).
-# aec:  PipeWire echo-cancel module (barge-in works). Enabled in M1 if clean.
+# duck: capture is muted while the robot speaks (no barge-in, M1 default).
+# aec:  PipeWire echo-cancel handles the loopback; capture stays live (M2 barge-in).
 echo_mode: "duck"

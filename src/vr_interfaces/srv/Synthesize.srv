@@ -6,3 +6,5 @@ string engine         # optional override: kokoro | sovits | orpheus; empty = co
 ---
 int16[] samples
 int32 sample_rate     # engines may synthesize at different rates (Kokoro: 24 kHz)
+bool success
+string error          # non-empty when success is false

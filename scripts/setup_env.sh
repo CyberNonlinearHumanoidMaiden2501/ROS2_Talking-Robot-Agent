@@ -18,12 +18,18 @@ if [ ! -x .venv/bin/python ] || ! grep -q "include-system-site-packages = true" 
 fi
 
 uv pip install --python .venv/bin/python --upgrade pip setuptools wheel
+# CUDA 12 runtime for ctranslate2/whisper (torch wheels are CUDA 13).
 uv pip install --python .venv/bin/python \
     colcon-common-extensions \
     pyyaml numpy sounddevice openai \
     faster-whisper==1.2.1 \
     silero-vad==6.2.1 \
     kokoro==0.9.4 \
+    "misaki[zh]" \
+    scipy \
+    nvidia-cublas-cu12 \
+    nvidia-cudnn-cu12 \
+    nvidia-cuda-runtime-cu12 \
     onnxruntime \
     duckduckgo_search
 

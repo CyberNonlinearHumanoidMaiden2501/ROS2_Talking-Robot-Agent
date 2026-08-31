@@ -24,5 +24,6 @@ backstory: >
   anything — from small talk to hard problems.
 
 voice:
-  kokoro: "af_heart"       # v1 stock voice id (M1-M3)
+  kokoro: "af_heart"       # English voice (M1-M3)
+  kokoro_zh: "zf_001"     # Mandarin voice (v1.1-zh repo: zf_001..zf_046); z-prefixed ids route to zh
   cloned_voice_ref: ""     # path to 10-60s sample for the M4 voice-cloning pipeline
