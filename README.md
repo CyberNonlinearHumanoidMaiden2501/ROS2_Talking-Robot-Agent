@@ -39,6 +39,17 @@ Every milestone ends with a git commit.
 | M4 | Cosplay voice (GPT-SoVITS cloning) | pending |
 | M5 | Physical-world tool registry contract | pending |
 
+## Testing convention
+
+Physical-interaction tests — anything using the microphone, speakers, audio
+routing, or future hardware — are run by the project owner. The developer
+ships one-command test scripts with clear pass/fail output for those, and the
+owner reports results.
+
+All other verification is automated and software-only: builds, unit tests,
+interface checks, and file-based audio pipelines (e.g. TTS -> WAV -> ASR
+round-trips on recorded or synthetic audio). Those never touch hardware.
+
 ## Setup
 
 1. `bash scripts/install_sudo.sh`  (one-time, needs sudo)
