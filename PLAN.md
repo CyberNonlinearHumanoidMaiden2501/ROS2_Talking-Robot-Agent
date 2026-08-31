@@ -82,4 +82,4 @@ Install colcon/rosdep/ffmpeg/portaudio19-dev via `install_sudo.sh` (needs sudo).
 
 1. Character name + traits for persona.yaml (I'll draft a faithful card from the name if you don't have one).
 2. Voice sample for M4 (10–60 s, clean, single speaker).
-3. Confirm which USB audio input actually carries your voice after the M1 smoke test.
+3. ✅ Resolved — a new PDP Audio Device USB mic appeared and is verified capturing (2026-08-31); it is the system default source and `config/audio.yaml` now points at it.

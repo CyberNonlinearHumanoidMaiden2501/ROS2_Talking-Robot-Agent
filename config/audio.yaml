@@ -1,11 +1,12 @@
 # Audio hardware + voice-activity settings (M1+).
-# Device names come from PipeWire; TODO(M1): confirm the input actually
-# carries voice (it currently exposes only an IEC958 digital input node).
+# Input: PDP Audio Device USB mic (mono-fallback) — verified capturing
+# 2026-08-31 (system default source). The old USB device only exposes an
+# IEC958 digital input and is NOT used.
 sample_rate: 16000
 channels: 1
 block_ms: 30
 
-input_device: "alsa_input.usb-Generic_USB_Audio-00.iec958-stereo"
+input_device: "alsa_input.usb-Performance_Designed_Products_PDP_Audio_Device-00.mono-fallback"
 output_device: "alsa_output.usb-Generic_USB_Audio-00.analog-stereo"
 
 vad:
