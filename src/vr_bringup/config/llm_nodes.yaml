@@ -1,0 +1,18 @@
+# ROS2 parameters for the DeepSeek LLM adapter nodes (used from M2 on).
+fast_llm_node:
+  ros__parameters:
+    base_url: "https://api.deepseek.com"
+    api_key_file: "/home/phalanx/deepseek-api-key"   # or DEEPSEEK_API_KEY env var
+    model: "deepseek-v4-flash"
+    max_tokens: 1024
+    temperature: 0.8
+    timeout_s: 60
+
+reasoning_llm_node:
+  ros__parameters:
+    base_url: "https://api.deepseek.com"
+    api_key_file: "/home/phalanx/deepseek-api-key"
+    model: "deepseek-v4-pro"
+    max_tokens: 8192
+    temperature: 0.6
+    timeout_s: 300

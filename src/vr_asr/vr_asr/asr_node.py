@@ -3,36 +3,39 @@
 Subscribes /audio/raw (int16 mono 16 kHz blocks), publishes /asr/speech_state
 every block and /asr/utterance when a finalized utterance is transcribed.
 Transcription runs in a worker thread so VAD never blocks.
+
+All settings are ROS parameters supplied by the launch file
+(vr_bringup/config/asr_node.yaml).
 """
 
-import os
 import queue
 import threading
-from pathlib import Path
 
 import numpy as np
 import rclpy
 from rclpy.node import Node
-import yaml
 
 from vr_asr.transcriber import Transcriber
 from vr_asr.vad_engine import BLOCK_SAMPLES, UtteranceSegmenter
 from vr_interfaces.msg import AudioChunk, SpeechState, Utterance
 
 
-def _default_config_dir() -> str:
-    return str(Path(__file__).resolve().parents[3] / "config")
-
-
 class AsrNode(Node):
     def __init__(self):
         super().__init__("asr_node")
-        self.declare_parameter("config_dir", os.environ.get("VOCAL_ROBOT_CONFIG_DIR", _default_config_dir()))
         self.declare_parameter("whisper_model", "medium")
+        self.declare_parameter("vad.threshold", 0.5)
+        self.declare_parameter("vad.min_speech_ms", 250)
+        self.declare_parameter("vad.end_silence_ms", 600)
+        self.declare_parameter("vad.max_utterance_ms", 30000)
 
-        vad_cfg = self._load_vad_config()
         self.get_logger().info(f"loading silero VAD + whisper ({self.get_parameter('whisper_model').value})...")
-        self._segmenter = UtteranceSegmenter(**vad_cfg)
+        self._segmenter = UtteranceSegmenter(
+            threshold=float(self.get_parameter("vad.threshold").value),
+            min_speech_ms=int(self.get_parameter("vad.min_speech_ms").value),
+            end_silence_ms=int(self.get_parameter("vad.end_silence_ms").value),
+            max_utterance_ms=int(self.get_parameter("vad.max_utterance_ms").value),
+        )
         self._transcriber = Transcriber(model_size=self.get_parameter("whisper_model").value)
         self.get_logger().info("asr_node ready")
 
@@ -43,18 +46,6 @@ class AsrNode(Node):
         self._jobs: queue.Queue = queue.Queue()
         self._worker = threading.Thread(target=self._transcribe_loop, daemon=True)
         self._worker.start()
-
-    def _load_vad_config(self) -> dict:
-        path = Path(self.get_parameter("config_dir").value) / "audio.yaml"
-        with open(path) as f:
-            cfg = yaml.safe_load(f)
-        vad = cfg.get("vad", {})
-        return {
-            "threshold": vad.get("threshold", 0.5),
-            "min_speech_ms": vad.get("min_speech_ms", 250),
-            "end_silence_ms": vad.get("end_silence_ms", 600),
-            "max_utterance_ms": vad.get("max_utterance_ms", 30000),
-        }
 
     def _on_audio(self, msg: AudioChunk):
         block = np.asarray(msg.samples, dtype=np.int16).astype(np.float32) / 32768.0

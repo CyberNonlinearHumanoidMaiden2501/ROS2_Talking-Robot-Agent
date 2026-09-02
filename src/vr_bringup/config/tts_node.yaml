@@ -1,0 +1,6 @@
+# ROS2 parameters for tts_node (Kokoro; engine swappable in M4).
+tts_node:
+  ros__parameters:
+    engine: "kokoro"
+    voice_en: "af_heart"   # English voice (Kokoro-82M repo)
+    voice_zh: "zf_001"     # Mandarin voice (Kokoro-82M-v1.1-zh repo: zf_001..zf_046)

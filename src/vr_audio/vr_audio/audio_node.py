@@ -1,19 +1,21 @@
 """audio_node — mic capture and speaker playback (sounddevice).
 
-Publishes /audio/raw (int16 mono 16 kHz, 32 ms blocks) and serves the Play
-action on /audio/play. In duck mode (echo_mode: duck) capture is dropped
-while the robot speaks. mock_audio (param or env VOCAL_ROBOT_MOCK_AUDIO=1)
-runs the node without opening any audio hardware.
+Publishes /audio/raw (int16 mono 16 kHz blocks) and serves the Play action
+on /audio/play. In duck mode (echo_mode: duck) capture is dropped while the
+robot speaks. mock_audio (parameter or env VOCAL_ROBOT_MOCK_AUDIO=1) runs the
+node without opening any audio hardware.
+
+All settings are ROS parameters supplied by the launch file
+(vr_bringup/config/audio_node.yaml). block_ms must stay 32: asr_node's VAD
+consumes exactly 512-sample (32 ms) blocks at 16 kHz.
 """
 
 import os
 import queue
 import threading
-from pathlib import Path
 
 import numpy as np
 import rclpy
-import yaml
 from rclpy.action import ActionServer
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -22,27 +24,27 @@ from vr_audio.playback import PlayTracker
 from vr_interfaces.action import Play
 from vr_interfaces.msg import AudioChunk
 
-BLOCK_SAMPLES = 512          # 32 ms @ 16 kHz
 FEEDBACK_STEP_S = 0.1        # ~10 Hz playback progress feedback
-
-
-def _default_config_dir() -> str:
-    return str(Path(__file__).resolve().parents[3] / "config")
 
 
 class AudioNode(Node):
     def __init__(self):
         super().__init__("audio_node")
-        self.declare_parameter("config_dir", os.environ.get("VOCAL_ROBOT_CONFIG_DIR", _default_config_dir()))
+        self.declare_parameter("sample_rate", 16000)
+        self.declare_parameter("channels", 1)
+        self.declare_parameter("block_ms", 32)
+        self.declare_parameter("input_device", "default")
+        self.declare_parameter("output_device", "default")
         self.declare_parameter("mock_audio", False)
+        self.declare_parameter("echo_mode", "duck")
 
-        cfg = self._load_config()
         self._mock = bool(self.get_parameter("mock_audio").value) \
             or os.environ.get("VOCAL_ROBOT_MOCK_AUDIO") == "1"
-        self._sample_rate = int(cfg.get("sample_rate", 16000))
-        self._input_device = cfg.get("input_device", "default")
-        self._output_device = cfg.get("output_device", "default")
-        self._echo_mode = cfg.get("echo_mode", "duck")
+        self._sample_rate = int(self.get_parameter("sample_rate").value)
+        self._block_samples = int(self._sample_rate * int(self.get_parameter("block_ms").value) / 1000)
+        self._input_device = self.get_parameter("input_device").value
+        self._output_device = self.get_parameter("output_device").value
+        self._echo_mode = self.get_parameter("echo_mode").value
 
         self._audio_pub = self.create_publisher(AudioChunk, "audio/raw", 10)
         self._capture_q: queue.Queue = queue.Queue(maxsize=256)
@@ -62,11 +64,6 @@ class AudioNode(Node):
             f"audio_node ready (mock={self._mock}, echo_mode={self._echo_mode}, "
             f"in={self._input_device}, out={self._output_device})")
 
-    def _load_config(self) -> dict:
-        path = Path(self.get_parameter("config_dir").value) / "audio.yaml"
-        with open(path) as f:
-            return yaml.safe_load(f) or {}
-
     # ---- capture -----------------------------------------------------------
 
     def _open_capture(self):
@@ -76,7 +73,7 @@ class AudioNode(Node):
         try:
             self._stream = sd.InputStream(
                 device=self._input_device, samplerate=self._sample_rate,
-                channels=1, dtype="int16", blocksize=BLOCK_SAMPLES,
+                channels=1, dtype="int16", blocksize=self._block_samples,
                 callback=self._capture_callback)
             self._stream.start()
         except Exception as exc:

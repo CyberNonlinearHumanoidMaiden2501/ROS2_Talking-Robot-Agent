@@ -19,8 +19,10 @@ any log lines) back to the developer.
  speaker ◄─ audio_node ◄─Play─ say.py / brain ◄─/tts/synthesize─ tts_node
 ```
 
-Config lives in `config/`: `audio.yaml` (devices, VAD, echo mode),
-`persona.yaml` (voice ids: `kokoro` = af_heart, `kokoro_zh` = zf_001).
+Node settings are ROS parameter files in `src/vr_bringup/config/`
+(`audio_node.yaml`, `asr_node.yaml`, `tts_node.yaml`, `llm_nodes.yaml`),
+loaded by the launch file; the persona and tool registry are data files in
+`src/vr_bringup/data/`.
 
 ## Already verified by the developer (software-only, no hardware used)
 
@@ -117,7 +119,7 @@ your audio session — run it when convenient, not during Test 1/2.
 
 ```bash
 mkdir -p ~/.config/pipewire/pipewire.conf.d
-cp ~/vocal-robot/config/pipewire/99-echo-cancel.conf ~/.config/pipewire/pipewire.conf.d/
+cp ~/vocal-robot/src/vr_bringup/config/pipewire/99-echo-cancel.conf ~/.config/pipewire/pipewire.conf.d/
 systemctl --user restart pipewire pipewire-pulse
 ```
 
@@ -135,8 +137,9 @@ systemctl --user restart pipewire pipewire-pulse
 
 **Pass:** audio still works with EC sink/source selected. (Actual echo
 suppression is exercised in M2.) To use echo-cancel with the robot, change
-`echo_mode: "duck"` to `echo_mode: "aec"` in `config/audio.yaml` — capture
-will then stay live while the robot speaks.
+`echo_mode: "duck"` to `echo_mode: "aec"` in
+`src/vr_bringup/config/audio_node.yaml` — capture will then stay live while
+the robot speaks.
 
 ## Reporting results
 

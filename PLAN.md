@@ -27,10 +27,11 @@ Five logical nodes; models are stateless adapters, the brain owns all state:
 ```
 /home/phalanx/vocal-robot/
 ├── .gitignore         (venv, model weights, build/install/log, API key, samples)
-├── config/            persona.yaml, llm.yaml (model IDs, base URL, key path), audio.yaml (device, VAD, echo mode), tools.yaml
-├── launch/            (in repo: src/vr_bringup/launch/vocal_robot.launch.py)
 ├── scripts/           setup_env.sh (venv), install_sudo.sh (apt, run by you), download_models.sh, run_vocal_robot.sh
 └── src/               vr_interfaces  vr_audio  vr_asr  vr_tts  vr_llm  vr_brain  vr_bringup
+    └── vr_bringup/    config/ (per-node ROS parameter yamls + pipewire echo-cancel drop-in),
+                       data/ (persona.yaml, tools.yaml — content files loaded by path),
+                       launch/vocal_robot.launch.py
 ```
 
 ## Git
