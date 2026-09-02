@@ -9,20 +9,21 @@ any log lines) back to the developer.
 
 | Component | Interface | Role |
 |---|---|---|
-| `audio_node` (`vr_audio`) | publishes `/audio/raw`; serves `audio/play` action | Owns mic/speaker. Captures 16 kHz mono in 32 ms blocks; plays PCM segments and reports exactly where playback stopped (used later for barge-in truncation). In **duck mode** (M1 default) capture is muted while the robot speaks. |
+| `capture_node` (`vr_audio`) | publishes `/audio/raw` | Mic sensor: 16 kHz mono in 32 ms blocks; in **duck mode** (M1 default) capture is dropped while the robot speaks (via `/audio/playing` from `playback_node`). |
+| `playback_node` (`vr_audio`) | serves `audio/play` action | Speaker actuator: plays PCM segments and reports exactly where playback stopped (used later for barge-in truncation); worker-thread pattern, single-threaded executor. |
 | `asr_node` (`vr_asr`) | publishes `/asr/speech_state`, `/asr/utterance` | Silero VAD (always-on trigger) + faster-whisper medium (bilingual en/zh, GPU int8). |
 | `tts_node` (`vr_tts`) | serves `/tts/synthesize` | Kokoro TTS, en + zh pipelines (24 kHz output). |
 | `say.py` | CLI | Synthesize + play one sentence via the ROS2 interfaces. |
 
 ```
-   mic ─► audio_node ──/audio/raw──► asr_node ──/asr/utterance──► (brain, M2)
- speaker ◄─ audio_node ◄─Play─ say.py / brain ◄─/tts/synthesize─ tts_node
+   mic ─► capture_node ──/audio/raw──► asr_node ──/asr/utterance──► (brain, M2)
+ speaker ◄─ playback_node ◄─Play─ say.py / brain ◄─/tts/synthesize─ tts_node
 ```
 
 Node settings are ROS parameter files in `src/vr_bringup/config/`
-(`audio_node.yaml`, `asr_node.yaml`, `tts_node.yaml`, `llm_nodes.yaml`),
-loaded by the launch file; the persona and tool registry are data files in
-`src/vr_bringup/data/`.
+(`capture_node.yaml`, `playback_node.yaml`, `asr_node.yaml`, `tts_node.yaml`,
+`llm_nodes.yaml`), loaded by the launch file; the persona and tool registry
+are data files in `src/vr_bringup/data/`.
 
 ## Already verified by the developer (software-only, no hardware used)
 
@@ -50,8 +51,8 @@ cd ~/vocal-robot
 bash scripts/run_vocal_robot.sh
 ```
 
-You should see all six nodes start. `audio_node` logs the enumerated audio
-devices and `asr_node` logs "whisper ready: medium on cuda/int8_float16".
+You should see all seven nodes start. `capture_node` logs the enumerated
+audio devices and `asr_node` logs "whisper ready: medium on cuda/int8_float16".
 Leave this terminal running; use a second terminal for the tests below.
 
 ## Test 1 — Microphone capture + ASR (bilingual)
@@ -80,10 +81,10 @@ While speaking you can also watch `/asr/speech_state` flip to `is_speech: True`
 **Pass:** both utterances appear with correct text and language, confidence
 roughly > 0.5. **Fail:** nothing appears, wrong language, or garbage text.
 
-If nothing appears: check the `audio_node` log — it prints the device list on
+If nothing appears: check the `capture_node` log — it prints the device list on
 startup. The input device is configured as `"default"` (the PDP mic should be
 the system default source; verify in GNOME Settings → Sound → Input). If the
-mic works in GNOME's own level meter but not here, report the `audio_node`
+mic works in GNOME's own level meter but not here, report the `capture_node`
 log output.
 
 ## Test 2 — Speaker playback (TTS)
@@ -107,8 +108,8 @@ Mandarin: `zf_001`..`zf_046`) and speed with `--speed 1.1`.
 each in the right language. **Fail:** silence, noise, or wrong language.
 
 If you hear nothing: check GNOME Settings → Sound → Output (default sink is
-the USB Audio device) and the volume. The `audio_node` opens the device named
-`"default"`, which follows the system default sink.
+the USB Audio device) and the volume. The `playback_node` opens the device
+named `"default"`, which follows the system default sink.
 
 ## Test 3 (optional) — Echo-cancel setup (groundwork for M2 barge-in)
 
@@ -138,11 +139,12 @@ systemctl --user restart pipewire pipewire-pulse
 **Pass:** audio still works with EC sink/source selected. (Actual echo
 suppression is exercised in M2.) To use echo-cancel with the robot, change
 `echo_mode: "duck"` to `echo_mode: "aec"` in
-`src/vr_bringup/config/audio_node.yaml` — capture will then stay live while
+`src/vr_bringup/config/capture_node.yaml` — capture will then stay live while
 the robot speaks.
 
 ## Reporting results
 
 For each test: PASS/FAIL, plus any unexpected log lines from the
-`audio_node`/`asr_node`/`tts_node` terminals. Include the transcription text
-Whisper produced (Test 1) so we can tune VAD/ASR settings if needed.
+`capture_node`/`playback_node`/`asr_node`/`tts_node` terminals. Include the
+transcription text Whisper produced (Test 1) so we can tune VAD/ASR settings
+if needed.

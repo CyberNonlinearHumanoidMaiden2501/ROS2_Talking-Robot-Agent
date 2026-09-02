@@ -1,0 +1,11 @@
+# ROS2 parameters for capture_node (microphone -> /audio/raw).
+# Devices route through the PipeWire default source, so WirePlumber picks the
+# PDP mic without "device busy" conflicts.
+capture_node:
+  ros__parameters:
+    sample_rate: 16000
+    channels: 1
+    block_ms: 32           # must stay 32: silero VAD consumes 512-sample blocks @16 kHz
+    input_device: "default"
+    mock_audio: false      # true = do not open the microphone (dev dry-run)
+    echo_mode: "duck"      # duck: drop capture while playing | aec: live capture (M2 barge-in)

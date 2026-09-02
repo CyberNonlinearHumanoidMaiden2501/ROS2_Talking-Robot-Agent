@@ -18,7 +18,8 @@ setup(
     license="MIT",
     entry_points={
         "console_scripts": [
-            "audio_node = vr_audio.audio_node:main",
+            "capture_node = vr_audio.capture_node:main",
+            "playback_node = vr_audio.playback_node:main",
         ],
     },
 )

@@ -1,0 +1,5 @@
+# ROS2 parameters for playback_node (Play action -> speaker).
+playback_node:
+  ros__parameters:
+    output_device: "default"
+    mock_audio: false      # true = simulate playback without a speaker (dev dry-run)

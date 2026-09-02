@@ -16,8 +16,10 @@ speaker ◄── audio_node ◄── tts_node ◄─┘   └── escalate �
                                           ExecuteTool service (tools.yaml)
 ```
 
-- **audio_node** (`vr_audio`): owns mic/speaker hardware; reports exact playback
-  progress so interruptions truncate correctly; echo-cancel/duck logic.
+- **capture_node** (`vr_audio`): mic sensor — publishes `/audio/raw` (16 kHz
+  mono blocks); ducks (mutes) while the robot speaks via `/audio/playing`.
+- **playback_node** (`vr_audio`): speaker actuator — serves the `Play` action
+  with exact truncation reporting (worker-thread pattern, no MTE).
 - **asr_node** (`vr_asr`): Silero VAD (always-on trigger) + faster-whisper
   (multilingual en/zh, GPU int8).
 - **tts_node** (`vr_tts`): single Synthesize interface; Kokoro by default,

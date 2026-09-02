@@ -4,9 +4,9 @@
 vr_interfaces/SpeechSegment[] segments   # ordered list of audio segments
 int32 sample_rate
 ---
-int32 segment_index       # segment currently playing (0-based)
-int32 samples_played      # samples played of the current segment so far
----
 bool completed
 int32 last_segment_index
 int32 samples_played_in_last
+---
+int32 segment_index       # segment currently playing (0-based)
+int32 samples_played      # samples played of the current segment so far

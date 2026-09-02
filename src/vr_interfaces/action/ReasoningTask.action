@@ -5,10 +5,10 @@ string context_json       # conversation snapshot (messages) at dispatch time
 string tool_schema_json   # registry serialized for the model
 string persona_yaml
 ---
-string progress_summary   # e.g. "[PROGRESS] comparing two options..."
-int32 progress_index
----
 string findings_json      # {summary, answer, tools_used, progress_log}
 int32 context_version     # version at dispatch; brain checks for staleness
 bool success
 string error
+---
+string progress_summary   # e.g. "[PROGRESS] comparing two options..."
+int32 progress_index

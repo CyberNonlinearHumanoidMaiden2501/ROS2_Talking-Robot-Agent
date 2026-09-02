@@ -6,7 +6,7 @@ Approved 2026-08-31. Status: **M0 complete** (commit `20f882d`).
 
 Five logical nodes; models are stateless adapters, the brain owns all state:
 
-- **audio_node** (`vr_audio`) — owns USB mic + speaker hardware (PortAudio/PipeWire). Publishes `/audio/raw` (16 kHz mono). Plays audio for the brain, reporting exact played-sample count so interruptions can be truncated precisely. Hosts echo-cancel/duck logic.
+- **capture_node + playback_node** (`vr_audio`) — mic sensor (publishes `/audio/raw` 16 kHz mono, ducks on `/audio/playing`) and speaker actuator (Play action with exact played-sample truncation reporting; worker-thread pattern, no MTE).
 - **asr_node** (`vr_asr`) — Silero VAD (streaming trigger, always-on) + faster-whisper multilingual (en/zh auto-detect, GPU int8) for utterance transcription. Publishes `/asr/speech_state` and `/asr/utterance`.
 - **tts_node** (`vr_tts`) — engine behind a single `Synthesize` service (text → WAV). Default engine **Kokoro 0.9.4** (fast, bilingual en/zh voices). Engine is a swappable backend; Orpheus and GPT-SoVITS plug in later as milestones.
 - **fast_llm_node + reasoning_llm_node** (`vr_llm`) — thin OpenAI-compatible adapters to DeepSeek (`deepseek-v4-flash` for chat, `deepseek-v4-pro` for reasoning). No state, no tool execution.

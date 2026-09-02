@@ -11,6 +11,7 @@ import argparse
 import sys
 
 import rclpy
+from rclpy.action import ActionClient
 from rclpy.node import Node
 
 from vr_interfaces.action import Play
@@ -32,9 +33,9 @@ def main():
     rclpy.init()
     node = Node("say_cli")
     synth_cli = node.create_client(Synthesize, "tts/synthesize")
-    play_cli = node.create_client(Play, "audio/play")
+    play_cli = ActionClient(node, Play, "audio/play")
 
-    if not synth_cli.wait_for_service(timeout_sec=10.0) or not play_cli.wait_for_service(timeout_sec=10.0):
+    if not synth_cli.wait_for_service(timeout_sec=10.0) or not play_cli.wait_for_server(timeout_sec=10.0):
         node.get_logger().error("tts/synthesize or audio/play service not available; is the stack running?")
         return 1
 
