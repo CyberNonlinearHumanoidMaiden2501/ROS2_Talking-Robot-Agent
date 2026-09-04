@@ -1,22 +1,26 @@
 """capture_node — microphone capture (sounddevice) publishing /audio/raw.
 
-A minimal sensor node: mic PCM in 32 ms blocks onto a topic. In duck mode
-(echo_mode: duck) capture is dropped while the robot speaks, per the
-/audio/playing topic published by playback_node; in aec mode capture always
-flows (echo-cancel handles the loopback). mock_audio (parameter or env
-VOCAL_ROBOT_MOCK_AUDIO=1) runs without opening the microphone.
+A minimal sensor node: the executor's 20 ms timer pulls 32 ms blocks from a
+callback-free InputStream and publishes them. In duck mode (echo_mode: duck)
+blocks are read and discarded while the robot speaks (per /audio/playing from
+playback_node), keeping the PortAudio buffer fresh without publishing; in aec
+mode capture keeps flowing (echo-cancel handles the loopback). mock_audio
+(parameter or env VOCAL_ROBOT_MOCK_AUDIO=1) runs without opening the
+microphone.
 
-Single-threaded executor suffices: every callback here is short.
+Timer-driven like playback_node: single-threaded executor, no callback
+thread, no queue, and no DDS activity on any audio thread.
 """
 
 import os
-import queue
 
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool
 
 from vr_interfaces.msg import AudioChunk
+
+DISCARD_CAP = 8192   # max samples read-and-discarded per tick while ducking
 
 
 class CaptureNode(Node):
@@ -39,13 +43,12 @@ class CaptureNode(Node):
 
         self._audio_pub = self.create_publisher(AudioChunk, "audio/raw", 10)
         self.create_subscription(Bool, "audio/playing", self._on_playing, 10)
-        self._capture_q: queue.Queue = queue.Queue(maxsize=256)
 
         if self._mock:
             self.get_logger().warn("MOCK capture: microphone NOT opened")
         else:
             self._open_capture()
-            self.create_timer(0.02, self._drain_capture)
+        self.create_timer(0.02, self._pull)
 
         self.get_logger().info(
             f"capture_node ready (mock={self._mock}, echo_mode={self._echo_mode}, "
@@ -61,8 +64,7 @@ class CaptureNode(Node):
         try:
             self._stream = sd.InputStream(
                 device=self._input_device, samplerate=self._sample_rate,
-                channels=1, dtype="int16", blocksize=self._block_samples,
-                callback=self._capture_callback)
+                channels=1, dtype="int16", blocksize=self._block_samples)
             self._stream.start()
         except Exception as exc:
             self.get_logger().error(
@@ -70,23 +72,26 @@ class CaptureNode(Node):
                 "with 'python -c \"import sounddevice as sd; print(sd.query_devices())\"'")
             raise
 
-    def _capture_callback(self, indata, frames, time_info, status):
-        # PortAudio thread: never block, hand off to the executor via queue
-        try:
-            self._capture_q.put_nowait(indata[:, 0])
-        except queue.Full:
-            pass  # executor busy; drop oldest audio rather than grow latency
-
-    def _drain_capture(self):
-        try:
-            block = self._capture_q.get_nowait()
-        except queue.Empty:
+    def _pull(self):
+        if self._mock:
             return
-        if self._echo_mode == "duck" and self._playing:
-            return  # duck: mute capture while speaking
+        try:
+            available = self._stream.read_available
+            if self._echo_mode == "duck" and self._playing:
+                # duck: keep PortAudio's buffer fresh, publish nothing
+                if available > 0:
+                    self._stream.read(min(available, DISCARD_CAP))
+                return
+            if available < self._block_samples:
+                return
+            block = self._stream.read(self._block_samples)
+        except Exception as exc:
+            self.get_logger().error(f"capture failed: {exc}")
+            return
+
         msg = AudioChunk()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.samples = block.tolist()
+        msg.samples = block[:, 0].tolist()
         self._audio_pub.publish(msg)
 
 
