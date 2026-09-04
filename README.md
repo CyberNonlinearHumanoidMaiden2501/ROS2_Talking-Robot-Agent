@@ -21,8 +21,10 @@ speaker ◄── audio_node ◄── tts_node ◄─┘   └── escalate �
 - **playback_node** (`vr_audio`): speaker actuator — serves the `Play` action
   with exact truncation reporting (timer-driven playback, 50 ms ticks,
   single-threaded executor).
-- **asr_node** (`vr_asr`): Silero VAD (always-on trigger) + faster-whisper
-  (multilingual en/zh, GPU int8).
+- **vad_node** (`vr_asr`): Silero VAD (always-on trigger) + utterance
+  segmentation — publishes `/asr/speech_state` and `/asr/utterance_audio`.
+- **asr_node** (`vr_asr`): faster-whisper (multilingual en/zh, GPU int8)
+  transcribes segments from vad_node; publishes `/asr/utterance`.
 - **tts_node** (`vr_tts`): single Synthesize interface; Kokoro by default,
   GPT-SoVITS/Orpheus as swappable engines (M4).
 - **fast_llm_node / reasoning_llm_node** (`vr_llm`): stateless DeepSeek adapters.

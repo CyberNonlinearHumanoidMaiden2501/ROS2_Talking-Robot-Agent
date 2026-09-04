@@ -13,6 +13,8 @@ def generate_launch_description():
              output="screen", parameters=[str(config_dir / "capture_node.yaml")]),
         Node(package="vr_audio", executable="playback_node", name="playback_node",
              output="screen", parameters=[str(config_dir / "playback_node.yaml")]),
+        Node(package="vr_asr", executable="vad_node", name="vad_node",
+             output="screen", parameters=[str(config_dir / "vad_node.yaml")]),
         Node(package="vr_asr", executable="asr_node", name="asr_node",
              output="screen", parameters=[str(config_dir / "asr_node.yaml")]),
         Node(package="vr_tts", executable="tts_node", name="tts_node",

@@ -18,6 +18,7 @@ setup(
     license="MIT",
     entry_points={
         "console_scripts": [
+            "vad_node = vr_asr.vad_node:main",
             "asr_node = vr_asr.asr_node:main",
         ],
     },

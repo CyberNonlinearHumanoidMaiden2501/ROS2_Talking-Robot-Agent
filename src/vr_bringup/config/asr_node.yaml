@@ -1,8 +1,4 @@
-# ROS2 parameters for asr_node (Silero VAD + faster-whisper).
+# ROS2 parameters for asr_node (faster-whisper transcription).
 asr_node:
   ros__parameters:
     whisper_model: "medium"      # multilingual en/zh
-    vad.threshold: 0.5           # Silero speech probability
-    vad.min_speech_ms: 250       # ignore shorter bursts (noise)
-    vad.end_silence_ms: 600      # silence after which an utterance is finalized
-    vad.max_utterance_ms: 30000  # auto-finalize runaway utterances

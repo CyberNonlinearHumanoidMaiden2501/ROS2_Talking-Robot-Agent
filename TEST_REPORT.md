@@ -11,19 +11,20 @@ any log lines) back to the developer.
 |---|---|---|
 | `capture_node` (`vr_audio`) | publishes `/audio/raw` | Mic sensor: 16 kHz mono in 32 ms blocks; in **duck mode** (M1 default) capture is dropped while the robot speaks (via `/audio/playing` from `playback_node`). |
 | `playback_node` (`vr_audio`) | serves `audio/play` action | Speaker actuator: plays PCM segments and reports exactly where playback stopped (used later for barge-in truncation); worker-thread pattern, single-threaded executor. |
-| `asr_node` (`vr_asr`) | publishes `/asr/speech_state`, `/asr/utterance` | Silero VAD (always-on trigger) + faster-whisper medium (bilingual en/zh, GPU int8). |
+| `vad_node` (`vr_asr`) | publishes `/asr/speech_state`, `/asr/utterance_audio` | Silero VAD (always-on trigger) + utterance segmentation; hands trimmed utterance audio to `asr_node`. |
+| `asr_node` (`vr_asr`) | publishes `/asr/utterance` | faster-whisper medium (bilingual en/zh, GPU int8); transcribes each segment synchronously. |
 | `tts_node` (`vr_tts`) | serves `/tts/synthesize` | Kokoro TTS, en + zh pipelines (24 kHz output). |
 | `say.py` | CLI | Synthesize + play one sentence via the ROS2 interfaces. |
 
 ```
-   mic ─► capture_node ──/audio/raw──► asr_node ──/asr/utterance──► (brain, M2)
+   mic ─► capture_node ──/audio/raw──► vad_node ──/asr/utterance_audio──► asr_node ──/asr/utterance──► (brain, M2)
  speaker ◄─ playback_node ◄─Play─ say.py / brain ◄─/tts/synthesize─ tts_node
 ```
 
 Node settings are ROS parameter files in `src/vr_bringup/config/`
-(`capture_node.yaml`, `playback_node.yaml`, `asr_node.yaml`, `tts_node.yaml`,
-`llm_nodes.yaml`), loaded by the launch file; the persona and tool registry
-are data files in `src/vr_bringup/data/`.
+(`capture_node.yaml`, `playback_node.yaml`, `vad_node.yaml`, `asr_node.yaml`,
+`tts_node.yaml`, `llm_nodes.yaml`), loaded by the launch file; the persona
+and tool registry are data files in `src/vr_bringup/data/`.
 
 ## Already verified by the developer (software-only, no hardware used)
 
