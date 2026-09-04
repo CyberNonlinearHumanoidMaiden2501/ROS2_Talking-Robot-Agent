@@ -17,6 +17,35 @@ if [ ! -x .venv/bin/python ] || ! grep -q "include-system-site-packages = true" 
     uv venv --system-site-packages .venv
 fi
 
+# uv venvs ship no activate script; add a minimal standard one for convenience.
+if [ ! -f .venv/bin/activate ]; then
+    cat > .venv/bin/activate <<'ACTIVATE'
+# Minimal activate script for the uv-created venv (uv does not ship one).
+# Usage: source .venv/bin/activate
+_OLD_VIRTUAL_PATH="$PATH"
+VIRTUAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export VIRTUAL_ENV
+PATH="$VIRTUAL_ENV/bin:$PATH"
+export PATH
+
+if [ -z "${VIRTUAL_ENV_DISABLE_PROMPT:-}" ] ; then
+    _OLD_VIRTUAL_PS1="$PS1"
+    PS1="(.venv) $PS1"
+    export PS1
+fi
+
+deactivate () {
+    export PATH="$_OLD_VIRTUAL_PATH"
+    if [ -n "${_OLD_VIRTUAL_PS1:-}" ] ; then
+        PS1="$_OLD_VIRTUAL_PS1"
+        export PS1
+    fi
+    unset VIRTUAL_ENV
+    unset -f deactivate
+}
+ACTIVATE
+fi
+
 uv pip install --python .venv/bin/python --upgrade pip setuptools wheel
 # CUDA 12 runtime for ctranslate2/whisper (torch wheels are CUDA 13).
 uv pip install --python .venv/bin/python \
