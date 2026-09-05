@@ -13,6 +13,7 @@ thread, no queue, and no DDS activity on any audio thread.
 """
 
 import os
+import sounddevice as sd
 
 import rclpy
 from rclpy.node import Node
@@ -58,8 +59,6 @@ class CaptureNode(Node):
         self._playing = msg.data
 
     def _open_capture(self):
-        import sounddevice as sd
-
         self.get_logger().info(f"audio devices:\n{sd.query_devices()}")
         try:
             self._stream = sd.InputStream(
@@ -91,7 +90,7 @@ class CaptureNode(Node):
 
         msg = AudioChunk()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.samples = block[:, 0].tolist()
+        msg.samples = block[0][:, 0].tolist()
         self._audio_pub.publish(msg)
 
 
