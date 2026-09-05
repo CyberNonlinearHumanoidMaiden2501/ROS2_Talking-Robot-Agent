@@ -12,7 +12,7 @@ any log lines) back to the developer.
 | `capture_node` (`vr_audio`) | publishes `/audio/raw` | Mic sensor: 16 kHz mono in 32 ms blocks; in **duck mode** (M1 default) capture is dropped while the robot speaks (via `/audio/playing` from `playback_node`). |
 | `playback_node` (`vr_audio`) | serves `audio/play` action | Speaker actuator: plays PCM segments and reports exactly where playback stopped (used later for barge-in truncation); worker-thread pattern, single-threaded executor. |
 | `vad_node` (`vr_asr`) | publishes `/asr/speech_state`, `/asr/utterance_audio` | Silero VAD (always-on trigger) + utterance segmentation; hands trimmed utterance audio to `asr_node`. |
-| `asr_node` (`vr_asr`) | publishes `/asr/utterance` | faster-whisper medium (bilingual en/zh, GPU int8); transcribes each segment synchronously. |
+| `asr_node` (`vr_asr`) | publishes `/asr/utterance` | Qwen3-ASR 0.6B (bilingual en/zh, GPU bf16); transcribes each segment synchronously. |
 | `tts_node` (`vr_tts`) | serves `/tts/synthesize` | Kokoro TTS, en + zh pipelines (24 kHz output). |
 | `say.py` | CLI | Synthesize + play one sentence via the ROS2 interfaces. |
 
@@ -31,7 +31,7 @@ and tool registry are data files in `src/vr_bringup/data/`.
 - Build: `colcon build` green for all 7 packages.
 - Playback truncation/feedback math: 4/4 unit checks pass.
 - VAD segmentation on generated speech/silence files: pass.
-- TTS→ASR round-trip (Kokoro → WAV → Whisper, en + zh): pass — Whisper
+- TTS→ASR round-trip (Kokoro → WAV → Qwen3-ASR, en + zh): pass — the model
   re-recognizes both languages with high similarity.
 - Full stack launches in **mock audio mode** (no mic/speaker opened).
 
@@ -41,8 +41,8 @@ playback. That is exactly what the tests below cover.
 ## Prerequisites
 
 - `libportaudio2` installed ✅ (you did this).
-- Models downloaded to the HF cache (whisper medium, Kokoro en/zh) — done via
-  `scripts/download_models.sh` (uses `HF_ENDPOINT=https://hf-mirror.com`).
+- Models downloaded to the HF cache (Qwen3-ASR 0.6B, Kokoro en/zh) — done via
+  `scripts/download_models.sh`.
 - One-time build already done; after any code change run `bash scripts/build.sh`.
 
 ## Launching the stack
@@ -53,7 +53,7 @@ bash scripts/run_vocal_robot.sh
 ```
 
 You should see all seven nodes start. `capture_node` logs the enumerated
-audio devices and `asr_node` logs "whisper ready: medium on cuda/int8_float16".
+audio devices and `asr_node` logs "qwen3-asr ready: Qwen/Qwen3-ASR-0.6B-hf on cuda".
 Leave this terminal running; use a second terminal for the tests below.
 
 ## Test 1 — Microphone capture + ASR (bilingual)
@@ -147,5 +147,5 @@ the robot speaks.
 
 For each test: PASS/FAIL, plus any unexpected log lines from the
 `capture_node`/`playback_node`/`asr_node`/`tts_node` terminals. Include the
-transcription text Whisper produced (Test 1) so we can tune VAD/ASR settings
+transcription text Qwen3-ASR produced (Test 1) so we can tune VAD/ASR settings
 if needed.

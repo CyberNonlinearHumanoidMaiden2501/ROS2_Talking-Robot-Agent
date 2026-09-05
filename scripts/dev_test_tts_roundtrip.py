@@ -1,7 +1,7 @@
-"""Dev test (software-only): Kokoro TTS -> WAV -> Whisper round-trip, en + zh.
+"""Dev test (software-only): Kokoro TTS -> WAV -> Qwen3-ASR round-trip, en + zh.
 
-Verifies both halves of the M1 voice pipeline without touching hardware:
-synthesis quality (Whisper can re-recognize the generated speech) and
+Verifies both halves of the voice pipeline without touching hardware:
+synthesis quality (Qwen3-ASR can re-recognize the generated speech) and
 bilingual transcription (auto language detection).
 """
 
@@ -11,14 +11,15 @@ import wave
 from pathlib import Path
 
 import numpy as np
+import torch
 from scipy.signal import resample_poly
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src" / "vr_tts"))
-sys.path.insert(0, str(REPO / "src" / "vr_asr"))
 
-from vr_asr.transcriber import Transcriber  # noqa: E402
 from vr_tts.kokoro_engine import KokoroEngine  # noqa: E402
+
+MODEL_ID = "Qwen/Qwen3-ASR-0.6B-hf"
 
 CASES = [
     ("en", "af_heart", "The quick brown fox jumps over the lazy dog.",
@@ -32,9 +33,34 @@ def normalize(text: str) -> str:
     return "".join(ch for ch in text.lower() if ch.isalnum() or "\u4e00" <= ch <= "\u9fff")
 
 
+def load_asr():
+    from transformers import AutoModelForMultimodalLM, AutoProcessor
+
+    processor = AutoProcessor.from_pretrained(MODEL_ID)
+    model = AutoModelForMultimodalLM.from_pretrained(
+        MODEL_ID, device_map="cuda", dtype=torch.bfloat16).eval()
+    return processor, model
+
+
+def transcribe(processor, model, audio: np.ndarray) -> dict:
+    # audio must be 1-D (T,): the processor treats 2-D arrays as batches
+    inputs = processor.apply_transcription_request(
+        audio=audio,
+        processor_kwargs={"sampling_rate": 16000},
+        language=None,
+    ).to(model.device, model.dtype)
+    with torch.inference_mode():
+        out = model.generate(**inputs, max_new_tokens=256, do_sample=False)
+    generated = out[:, inputs["input_ids"].shape[1]:]
+    text = processor.decode(generated, return_format="transcription_only")[0]
+    parsed = processor.decode(generated, return_format="parsed")[0]
+    lang = parsed.get("language") if isinstance(parsed, dict) else None
+    return {"text": text.strip(), "language": lang}
+
+
 def main():
     engine = KokoroEngine(device=None)
-    transcriber = Transcriber(model_size="medium")
+    processor, model = load_asr()
     ok = True
 
     for lang, voice, text, expected, min_ratio in CASES:
@@ -47,7 +73,7 @@ def main():
             w.setframerate(16000)
             w.writeframes((np.clip(audio16, -1, 1) * 32767).astype(np.int16).tobytes())
 
-        result = transcriber.transcribe(audio16)
+        result = transcribe(processor, model, audio16)
         ratio = difflib.SequenceMatcher(None, normalize(result["text"]), normalize(expected)).ratio()
         passed = ratio >= min_ratio
         ok &= passed

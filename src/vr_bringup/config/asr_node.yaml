@@ -1,4 +1,7 @@
-# ROS2 parameters for asr_node (faster-whisper transcription).
+# ROS2 parameters for asr_node (Qwen3-ASR transcription).
 asr_node:
   ros__parameters:
-    whisper_model: "medium"      # multilingual en/zh
+    asr_model: "Qwen/Qwen3-ASR-0.6B-hf"
+    device: "cuda"
+    dtype: "bfloat16"
+    max_new_tokens: 256

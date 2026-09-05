@@ -24,7 +24,7 @@ speaker ◄── audio_node ◄── tts_node ◄─┘   └── escalate �
   single-threaded executor).
 - **vad_node** (`vr_asr`): Silero VAD (always-on trigger) + utterance
   segmentation — publishes `/asr/speech_state` and `/asr/utterance_audio`.
-- **asr_node** (`vr_asr`): faster-whisper (multilingual en/zh, GPU int8)
+- **asr_node** (`vr_asr`): Qwen3-ASR 0.6B (multilingual en/zh, GPU bf16)
   transcribes segments from vad_node; publishes `/asr/utterance`.
 - **tts_node** (`vr_tts`): single Synthesize interface; Kokoro by default,
   GPT-SoVITS/Orpheus as swappable engines (M4).
@@ -39,7 +39,7 @@ Every milestone ends with a git commit.
 | # | Milestone | Status |
 |---|-----------|--------|
 | M0 | Toolchain, repo, interfaces, stub nodes | done |
-| M1 | Voice I/O: VAD + Whisper ASR + Kokoro TTS | implemented; owner tests pending |
+| M1 | Voice I/O: VAD + Qwen3-ASR + Kokoro TTS | implemented; owner tests pending |
 | M2 | Conversation core: brain + fast LLM + persona + barge-in | pending |
 | M3 | Reasoning escalation + digital tools | pending |
 | M4 | Cosplay voice (GPT-SoVITS cloning) | pending |
@@ -60,6 +60,6 @@ round-trips on recorded or synthetic audio). Those never touch hardware.
 
 1. `bash scripts/install_sudo.sh`  (one-time, needs sudo)
 2. `bash scripts/setup_env.sh`     (venv + Python deps)
-3. `bash scripts/download_models.sh` (whisper medium + Kokoro weights)
+3. `bash scripts/download_models.sh` (Qwen3-ASR + Kokoro weights)
 4. `bash scripts/build.sh`         (colcon build)
 5. `bash scripts/run_vocal_robot.sh`

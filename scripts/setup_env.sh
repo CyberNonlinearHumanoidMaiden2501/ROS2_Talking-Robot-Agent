@@ -51,11 +51,11 @@ uv pip install --python .venv/bin/python --upgrade pip setuptools wheel
 uv pip install --python .venv/bin/python \
     colcon-common-extensions \
     pyyaml numpy sounddevice openai \
-    faster-whisper==1.2.1 \
     silero-vad==6.2.1 \
     kokoro==0.9.4 \
     "misaki[zh]" \
     scipy \
+    accelerate \
     nvidia-cublas-cu12 \
     nvidia-cudnn-cu12 \
     nvidia-cuda-runtime-cu12 \

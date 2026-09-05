@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # Downloads model weights used by the local nodes (M1+).
-# Whisper "medium" (multilingual en/zh), Kokoro TTS (en + zh checkpoints and
-# default voices). Silero VAD ships inside the silero-vad wheel — no download.
+# Qwen3-ASR 0.6B (bilingual en/zh transcription), Kokoro TTS (en + zh
+# checkpoints and default voices). Silero VAD ships inside the silero-vad
+# wheel — no download.
 set -eo pipefail
 cd "$(dirname "$0")/.."
 export PATH="$PWD/.venv/bin:$PATH"
 
 python3 - <<'PY'
-from faster_whisper import WhisperModel
-print("[1/2] faster-whisper medium (multilingual) ...")
-try:
-    WhisperModel("medium", device="cuda", compute_type="int8_float16")
-    print("  -> medium on CUDA OK")
-except Exception as e:
-    print("  CUDA unavailable (%s); falling back to CPU int8" % e)
-    WhisperModel("medium", device="cpu", compute_type="int8")
+print("[1/2] Qwen3-ASR (Qwen/Qwen3-ASR-0.6B-hf) ...")
+import torch
+from transformers import AutoModelForMultimodalLM, AutoProcessor
+AutoProcessor.from_pretrained("Qwen/Qwen3-ASR-0.6B-hf")
+AutoModelForMultimodalLM.from_pretrained(
+    "Qwen/Qwen3-ASR-0.6B-hf", device_map="cpu", dtype=torch.bfloat16)
+print("  -> Qwen3-ASR OK")
 
 print("[2/2] kokoro TTS (en + zh checkpoints and voices) ...")
 from kokoro import KPipeline
