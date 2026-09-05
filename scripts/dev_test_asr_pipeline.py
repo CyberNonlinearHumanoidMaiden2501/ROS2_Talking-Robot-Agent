@@ -66,8 +66,15 @@ def main():
     print(f"published {n // BLOCK} speech blocks ({n / 16000:.1f}s), waiting for transcription...")
 
     deadline = time.time() + 20.0
-    while not received and time.time() < deadline:
+    last_count = 0
+    quiet_deadline = None
+    while time.time() < deadline:
         rclpy.spin_once(node, timeout_sec=0.1)
+        if len(received) != last_count:
+            last_count = len(received)
+            quiet_deadline = time.time() + 4.0   # batching: more batches may follow
+        if quiet_deadline is not None and time.time() > quiet_deadline:
+            break
 
     if not received:
         print("[pipeline] FAIL  no utterance received within 20s")
@@ -75,10 +82,11 @@ def main():
         rclpy.shutdown()
         return 1
 
-    got = received[0].text
+    got = " ".join(m.text for m in received)
     ratio = difflib.SequenceMatcher(None, got.lower().strip(), TEXT.lower().strip()).ratio()
     ok = ratio > 0.7
-    print(f"[pipeline] {'PASS' if ok else 'FAIL'}  ratio={ratio:.2f}  lang={received[0].language}")
+    print(f"[pipeline] {'PASS' if ok else 'FAIL'}  ratio={ratio:.2f}  "
+          f"batches={len(received)} lang={received[0].language}")
     print(f"           expected: {TEXT}")
     print(f"           heard   : {got}")
 

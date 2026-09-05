@@ -1,4 +1,4 @@
-"""Silero VAD wrapper + utterance segmentation state machine (file-testable)."""
+"""Silero VAD sliding-window segmenter (file-testable)."""
 
 from __future__ import annotations
 
@@ -10,64 +10,38 @@ BLOCK_SAMPLES = 512  # 32 ms; silero's required block size at 16 kHz
 
 
 class UtteranceSegmenter:
-    """Feed 512-sample float32 blocks via process(); it returns a finalized
-    utterance (float32 array, trailing silence trimmed) or None.
+    """Emits fixed-length audio windows while speech is detected.
 
-    State machine: silence -> speech on prob >= threshold; speech -> silence
-    once trailing silence reaches end_silence_ms, then the utterance is
-    finalized. Utterances shorter than min_speech_ms are discarded as noise.
-    A max_utterance_ms guard finalizes runaway speech (e.g. loud music).
+    Keeps a rolling window of `window_blocks` blocks (audio + probabilities).
+    When the mean probability of the oldest `prob_blocks` probs exceeds the
+    threshold, the whole window is emitted and the state resets — consecutive
+    windows are disjoint and together cover the speech.
     """
 
-    def __init__(self, threshold=0.5, min_speech_ms=250, end_silence_ms=600,
-                 max_utterance_ms=30000):
+    def __init__(self, threshold=0.5, window_blocks=6, prob_blocks=3):
         from silero_vad import load_silero_vad
 
         self._model = load_silero_vad()
         self.threshold = threshold
-        self.min_speech_samples = int(min_speech_ms * SAMPLE_RATE / 1000)
-        self.end_silence_samples = int(end_silence_ms * SAMPLE_RATE / 1000)
-        self.max_speech_samples = int(max_utterance_ms * SAMPLE_RATE / 1000)
-
-        self._buf: list[np.ndarray] = []
-        self._speech_samples = 0
-        self._silence_samples = 0
-        self.is_speech = False
+        self.window_blocks = int(window_blocks)
+        self.prob_blocks = min(int(prob_blocks), self.window_blocks)
+        self._buf = [np.zeros(BLOCK_SAMPLES, dtype=np.float32) for _ in range(self.window_blocks)]
+        self._prob_buf = [0.0] * self.window_blocks
 
     def _prob(self, block: np.ndarray) -> float:
         with torch.inference_mode():
             return float(self._model(torch.from_numpy(block), SAMPLE_RATE))
 
     def process(self, block: np.ndarray) -> np.ndarray | None:
-        """Feed one block; returns a finalized utterance or None."""
-        prob = self._prob(block)
-        utterance = None
+        """Feed one block; returns a window of audio when speech is detected."""
+        self._buf.append(block)
+        self._buf.pop(0)
+        self._prob_buf.append(self._prob(block))
+        self._prob_buf.pop(0)
 
-        if self.is_speech:
-            self._buf.append(block)
-            if prob >= self.threshold:
-                self._speech_samples += BLOCK_SAMPLES
-                self._silence_samples = 0
-            else:
-                self._silence_samples += BLOCK_SAMPLES
-                if (self._silence_samples >= self.end_silence_samples
-                        or self._speech_samples >= self.max_speech_samples):
-                    utterance = self._finalize()
-        elif prob >= self.threshold:
-            self.is_speech = True
-            self._buf = [block]
-            self._speech_samples = BLOCK_SAMPLES
-            self._silence_samples = 0
-
-        return utterance
-
-    def _finalize(self) -> np.ndarray | None:
-        audio = np.concatenate(self._buf).astype(np.float32)
-        keep = self._speech_samples
-        self._buf = []
-        self._speech_samples = 0
-        self._silence_samples = 0
-        self.is_speech = False
-        if keep < self.min_speech_samples:
-            return None  # too short: treat as noise
-        return audio[:keep]
+        if np.mean(self._prob_buf[: self.prob_blocks]) > self.threshold:
+            audio = np.concatenate(self._buf).astype(np.float32)
+            self._buf = [np.zeros(BLOCK_SAMPLES, dtype=np.float32) for _ in range(self.window_blocks)]
+            self._prob_buf = [0.0] * self.window_blocks
+            return audio
+        return None

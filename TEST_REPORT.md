@@ -11,8 +11,8 @@ any log lines) back to the developer.
 |---|---|---|
 | `capture_node` (`vr_audio`) | publishes `/audio/raw` | Mic sensor: 16 kHz mono in 32 ms blocks; in **duck mode** (M1 default) capture is dropped while the robot speaks (via `/audio/playing` from `playback_node`). |
 | `playback_node` (`vr_audio`) | serves `audio/play` action | Speaker actuator: plays PCM segments and reports exactly where playback stopped (used later for barge-in truncation); worker-thread pattern, single-threaded executor. |
-| `vad_node` (`vr_asr`) | publishes `/asr/speech_state`, `/asr/utterance_audio` | Silero VAD (always-on trigger) + utterance segmentation; hands trimmed utterance audio to `asr_node`. |
-| `asr_node` (`vr_asr`) | publishes `/asr/utterance` | Qwen3-ASR 0.6B (bilingual en/zh, GPU bf16); transcribes each segment synchronously. |
+| `vad_node` (`vr_asr`) | publishes `/asr/utterance_audio` | Silero VAD sliding-window segmentation (~192 ms speech windows). |
+| `asr_node` (`vr_asr`) | publishes `/asr/utterance` | Qwen3-ASR 0.6B (bilingual en/zh, GPU bf16); batches VAD windows and transcribes with recent transcriptions as prompt context. |
 | `tts_node` (`vr_tts`) | serves `/tts/synthesize` | Kokoro TTS, en + zh pipelines (24 kHz output). |
 | `say.py` | CLI | Synthesize + play one sentence via the ROS2 interfaces. |
 

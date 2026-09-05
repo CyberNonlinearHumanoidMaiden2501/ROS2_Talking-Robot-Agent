@@ -30,6 +30,7 @@ class CaptureNode(Node):
         self.declare_parameter("sample_rate", 16000)
         self.declare_parameter("channels", 1)
         self.declare_parameter("block_ms", 32)
+        self.declare_parameter("poll_ms", 3.2)
         self.declare_parameter("input_device", "default")
         self.declare_parameter("mock_audio", False)
         self.declare_parameter("echo_mode", "duck")
@@ -49,7 +50,7 @@ class CaptureNode(Node):
             self.get_logger().warn("MOCK capture: microphone NOT opened")
         else:
             self._open_capture()
-        self.create_timer(0.02, self._pull)
+        self.create_timer(float(self.get_parameter("poll_ms").value) / 1000.0, self._pull)
 
         self.get_logger().info(
             f"capture_node ready (mock={self._mock}, echo_mode={self._echo_mode}, "

@@ -1,7 +1,12 @@
-# ROS2 parameters for asr_node (Qwen3-ASR transcription).
+# ROS2 parameters for asr_node (Qwen3-ASR batch transcription).
 asr_node:
   ros__parameters:
     asr_model: "Qwen/Qwen3-ASR-0.6B-hf"
     device: "cuda"
     dtype: "bfloat16"
-    max_new_tokens: 256
+    max_new_tokens: 1000
+    poll_ms: 100           # batching check timer period
+    batch_idle_ms: 300     # quiet time after the last audio window before transcribing
+    min_utterances: 5      # minimum buffered VAD windows per batch
+    context_size: 5        # recent transcriptions fed to the model as prompt context
+    context_reset_s: 5.0   # quiet time after which the context resets

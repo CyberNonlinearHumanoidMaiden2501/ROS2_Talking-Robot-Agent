@@ -1,11 +1,18 @@
-"""asr_node — transcribes finalized utterances from vad_node (Qwen3-ASR).
+"""asr_node — batches VAD audio windows and transcribes them (Qwen3-ASR).
 
-Subscribes /asr/utterance_audio (int16 mono 16 kHz, one utterance per
-message) and publishes /asr/utterance. Transcription runs synchronously in
-the subscription callback: utterances arrive seconds apart and each takes a
-few hundred ms on the GPU, so a single-threaded executor is sufficient —
-no threads, no queues.
+Subscribes /asr/utterance_audio (int16 mono 16 kHz windows) and buffers them.
+Once the mic has been quiet for `batch_idle_ms` and at least `min_utterances`
+windows are buffered, the concatenated audio is transcribed in one call with
+the last `context_size` transcriptions passed as prompt context. The context
+resets after `context_reset_s` of quiet.
+
+Transcription runs synchronously in the timer callback: batches arrive
+seconds apart and each takes a few hundred ms on the GPU, so a
+single-threaded executor is sufficient — no threads, no queues.
 """
+
+import time
+from collections import deque
 
 import numpy as np
 import rclpy
@@ -33,7 +40,12 @@ class AsrNode(Node):
         self.declare_parameter("asr_model", "Qwen/Qwen3-ASR-0.6B-hf")
         self.declare_parameter("device", "cuda")
         self.declare_parameter("dtype", "bfloat16")
-        self.declare_parameter("max_new_tokens", 256)
+        self.declare_parameter("max_new_tokens", 1000)
+        self.declare_parameter("poll_ms", 100)
+        self.declare_parameter("batch_idle_ms", 300)
+        self.declare_parameter("min_utterances", 5)
+        self.declare_parameter("context_size", 5)
+        self.declare_parameter("context_reset_s", 5.0)
 
         model_id = self.get_parameter("asr_model").value
         device = self.get_parameter("device").value
@@ -47,15 +59,21 @@ class AsrNode(Node):
             model_id, device_map=device, dtype=dtype).eval()
         self.get_logger().info(f"qwen3-asr ready: {model_id} on {device}")
 
+        self._utterance_buff: list[np.ndarray] = []
+        self._context_buff: deque = deque(maxlen=int(self.get_parameter("context_size").value))
+        self._last_audio_time = time.time()
+
         self._utterance_pub = self.create_publisher(Utterance, "asr/utterance", 10)
         self.create_subscription(AudioChunk, "asr/utterance_audio", self._on_utterance, 10)
+        self.create_timer(self.get_parameter("poll_ms").value / 1000.0, self._timer_callback)
 
-    def _transcribe(self, audio: np.ndarray) -> dict:
+    def _transcribe(self, audio: np.ndarray, context: str) -> dict:
         """audio: float32 mono 16 kHz. Returns {text, language, confidence}."""
         # audio must be 1-D (T,): the processor treats 2-D arrays as batches
         inputs = self._processor.apply_transcription_request(
             audio=audio,
             processor_kwargs={"sampling_rate": 16000},
+            prompt=f"Context: {context}",
             language=None,
         ).to(self._model.device, self._model.dtype)
 
@@ -70,7 +88,6 @@ class AsrNode(Node):
         generated = output.sequences[:, inputs["input_ids"].shape[1]:]
 
         parsed = self._processor.decode(generated, return_format="parsed")[0]
-        text = self._processor.decode(generated, return_format="transcription_only")[0]
 
         # mean probability of the generated tokens as the confidence scalar
         transition = self._model.compute_transition_scores(
@@ -78,30 +95,43 @@ class AsrNode(Node):
         )
         confidence = float(transition.exp().mean().item())
 
+        text = parsed.get("transcription") if isinstance(parsed, dict) else None
         lang_name = parsed.get("language") if isinstance(parsed, dict) else None
         return {
-            "text": text.strip(),
+            "text": text,
             "language": LANG_CODES.get(lang_name, ""),
             "confidence": confidence,
         }
 
     def _on_utterance(self, msg: AudioChunk):
         audio = np.asarray(msg.samples, dtype=np.int16).astype(np.float32) / 32768.0
-        try:
-            result = self._transcribe(audio)
-        except Exception as exc:
-            self.get_logger().error(f"transcription failed: {exc}")
-            return
-        if not result["text"]:
-            return
+        self._utterance_buff.append(audio)
+        self._last_audio_time = time.time()
 
-        out = Utterance()
-        out.header.stamp = msg.header.stamp
-        out.text = result["text"]
-        out.language = result["language"]
-        out.confidence = float(result["confidence"])
-        self._utterance_pub.publish(out)
-        self.get_logger().info(f"utterance [{out.language}] conf={out.confidence:.2f}: {out.text}")
+    def _timer_callback(self):
+        idle_s = time.time() - self._last_audio_time
+        if idle_s >= self.get_parameter("batch_idle_ms").value / 1000.0 \
+                and len(self._utterance_buff) >= int(self.get_parameter("min_utterances").value):
+            context = " ".join(self._context_buff)
+            audio_chunk = np.concatenate(self._utterance_buff).astype(np.float32)
+            try:
+                result = self._transcribe(audio_chunk, context)
+            except Exception as exc:
+                self.get_logger().error(f"transcription failed: {exc}")
+                return
+            if result["text"]:
+                self._context_buff.append(result["text"])
+                out = Utterance()
+                out.header.stamp = self.get_clock().now().to_msg()
+                out.text = result["text"]
+                out.language = result["language"]
+                out.confidence = float(result["confidence"])
+                self._utterance_pub.publish(out)
+                self.get_logger().info(f"utterance [{out.language}] conf={out.confidence:.2f}: {out.text}")
+            self._utterance_buff = []
+
+        if idle_s >= self.get_parameter("context_reset_s").value:
+            self._context_buff.clear()
 
 
 def main(args=None):
