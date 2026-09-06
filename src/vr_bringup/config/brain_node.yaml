@@ -1,0 +1,8 @@
+# ROS2 parameters for brain_node (conversation conductor).
+brain_node:
+  ros__parameters:
+    turn_end_ms: 1500       # quiet time after the last utterance before the turn is processed
+    history_limit: 20       # max conversation messages kept in history
+    voice_en: "af_heart"
+    voice_zh: "zf_001"
+    poll_ms: 100            # state-machine timer period

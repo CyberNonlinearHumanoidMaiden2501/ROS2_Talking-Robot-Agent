@@ -2,7 +2,7 @@
 fast_llm_node:
   ros__parameters:
     base_url: "https://api.deepseek.com"
-    api_key_file: "/home/phalanx/deepseek-api-key"   # or DEEPSEEK_API_KEY env var
+    api_key_file: "~/deepseek-api-key"   # user's home dir; or DEEPSEEK_API_KEY env var
     model: "deepseek-v4-flash"
     max_tokens: 1024
     temperature: 0.8
@@ -11,7 +11,7 @@ fast_llm_node:
 reasoning_llm_node:
   ros__parameters:
     base_url: "https://api.deepseek.com"
-    api_key_file: "/home/phalanx/deepseek-api-key"
+    api_key_file: "~/deepseek-api-key"
     model: "deepseek-v4-pro"
     max_tokens: 8192
     temperature: 0.6

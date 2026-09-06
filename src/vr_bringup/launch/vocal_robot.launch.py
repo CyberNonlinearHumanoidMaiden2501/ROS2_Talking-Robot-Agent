@@ -7,6 +7,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     config_dir = Path(get_package_share_directory("vr_bringup")) / "config"
+    data_dir = Path(get_package_share_directory("vr_bringup")) / "data"
 
     return LaunchDescription([
         Node(package="vr_audio", executable="capture_node", name="capture_node",
@@ -23,5 +24,7 @@ def generate_launch_description():
              output="screen", parameters=[str(config_dir / "llm_nodes.yaml")]),
         Node(package="vr_llm", executable="reasoning_llm_node", name="reasoning_llm_node",
              output="screen", parameters=[str(config_dir / "llm_nodes.yaml")]),
-        Node(package="vr_brain", executable="brain_node", name="brain_node", output="screen"),
+        Node(package="vr_brain", executable="brain_node", name="brain_node", output="screen",
+             parameters=[str(config_dir / "brain_node.yaml"),
+                         {"persona_path": str(data_dir / "persona.yaml")}]),
     ])

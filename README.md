@@ -29,9 +29,11 @@ speaker ◄── audio_node ◄── tts_node ◄─┘   └── escalate �
   context; publishes `/asr/utterance`.
 - **tts_node** (`vr_tts`): single Synthesize interface; Kokoro by default,
   GPT-SoVITS/Orpheus as swappable engines (M4).
-- **fast_llm_node / reasoning_llm_node** (`vr_llm`): stateless DeepSeek adapters.
-- **brain_node** (`vr_brain`): the conductor — state machine, conversation store,
-  persona, tool registry, barge-in, escalation.
+- **fast_llm_node** (`vr_llm`): stateless DeepSeek adapter (deepseek-v4-flash)
+  — serves `/llm/chat_fast`; the reasoning node stays a stub until M3.
+- **brain_node** (`vr_brain`): the conductor — turn-taking state machine,
+  conversation store, persona prompt assembly, barge-in with as-spoken
+  truncation recording. Fully event-driven, single-threaded executor.
 
 ## Milestones
 
@@ -41,7 +43,7 @@ Every milestone ends with a git commit.
 |---|-----------|--------|
 | M0 | Toolchain, repo, interfaces, stub nodes | done |
 | M1 | Voice I/O: VAD + Qwen3-ASR + Kokoro TTS | done (verified on hardware) |
-| M2 | Conversation core: brain + fast LLM + persona + barge-in | pending |
+| M2 | Conversation core: brain + fast LLM + persona + barge-in | done |
 | M3 | Reasoning escalation + digital tools | pending |
 | M4 | Cosplay voice (GPT-SoVITS cloning) | pending |
 | M5 | Physical-world tool registry contract | pending |

@@ -143,6 +143,35 @@ suppression is exercised in M2.) To use echo-cancel with the robot, change
 `src/vr_bringup/config/capture_node.yaml` — capture will then stay live while
 the robot speaks.
 
+## Test 4 — Conversation (M2, physical)
+
+Goal: a full spoken conversation with the persona, including interruption.
+
+```bash
+cd ~/vocal-robot
+source scripts/start_system.sh
+ros2 launch vr_bringup vocal_robot.launch.py
+```
+
+Wait for `brain_node ready (persona: Nova)` and `fast_llm_node ready`. Then:
+
+1. Say a clear sentence and pause ("What's your name?"). The robot should
+   reply within a few seconds in the same language, in character.
+2. Ask it to tell a story, then **start speaking over its reply mid-sentence**.
+   It should stop almost immediately (~0.5 s), and answer what you said next.
+3. Ask a question in Chinese; the reply should come back in Chinese.
+
+Watch the terminal: `brain_node` logs each `turn:`, `reply:`, and on
+interruption, `speech interrupted; recorded as-spoken: ...` — that line
+should show exactly the words you heard before it stopped.
+
+**Pass:** natural replies in both languages, character-consistent tone, and
+clean interruption with the as-spoken text logged. **Fail:** no reply within
+~10 s, replies in the wrong language, or no reaction to interruption.
+
+Report any transcript/reply logs that look wrong so we can tune
+`turn_end_ms`, the persona card, or the ASR settings.
+
 ## Reporting results
 
 For each test: PASS/FAIL, plus any unexpected log lines from the
