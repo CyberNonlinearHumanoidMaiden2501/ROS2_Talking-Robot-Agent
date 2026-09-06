@@ -1,10 +1,12 @@
 """playback_node — speaker playback serving the Play action (timer-driven).
 
 Playback runs as a timer-driven state machine entirely on the node's
-single-threaded executor: every tick (50 ms by default) writes ~40 ms of
-audio (20 % headroom against timer jitter; the PortAudio buffer absorbs the
-rest). Cancel requests are therefore observed at most one period late, and
-no thread ever blocks the executor.
+single-threaded executor. Each tick writes a chunk slightly LARGER than one
+tick period (chunk_ratio > 1) so the device buffer stays filled; the
+blocking write then paces playback at the device rate and timer jitter is
+absorbed by the buffer. A ratio below 1 would drain the buffer and produce
+an audible gap at every tick. Cancel requests are observed at most one
+period late, and no thread ever blocks the executor.
 
 mock_audio (parameter or env VOCAL_ROBOT_MOCK_AUDIO=1) plays at the same tick
 cadence without a speaker, keeping mock tests timing-realistic.
@@ -21,8 +23,6 @@ from std_msgs.msg import Bool
 from vr_audio.playback import PlayTracker
 from vr_interfaces.action import Play
 
-CHUNK_RATIO = 0.8   # audio written per tick as a fraction of the period
-
 
 class PlaybackNode(Node):
     def __init__(self):
@@ -30,11 +30,13 @@ class PlaybackNode(Node):
         self.declare_parameter("output_device", "default")
         self.declare_parameter("mock_audio", False)
         self.declare_parameter("tick_ms", 50)
+        self.declare_parameter("chunk_ratio", 1.2)
 
         self._mock = bool(self.get_parameter("mock_audio").value) \
             or os.environ.get("VOCAL_ROBOT_MOCK_AUDIO") == "1"
         self._output_device = self.get_parameter("output_device").value
         self._tick_period = max(int(self.get_parameter("tick_ms").value), 10) / 1000.0
+        self._chunk_ratio = float(self.get_parameter("chunk_ratio").value)
 
         # per-goal playback state (single in-flight goal; executor-owned)
         self._busy = False
@@ -76,7 +78,7 @@ class PlaybackNode(Node):
                           for seg in goal_handle.request.segments]
         self._rate = goal_handle.request.sample_rate or 24000
         self._tracker = PlayTracker([len(seg) for seg in self._segments])
-        self._step = max(int(self._rate * self._tick_period * CHUNK_RATIO), 1)
+        self._step = max(int(self._rate * self._tick_period * self._chunk_ratio), 1)
 
         # ACCEPTED -> EXECUTING. Note: goal_handle.execute() also calls
         # notify_execute(), which raises AttributeError when no execute

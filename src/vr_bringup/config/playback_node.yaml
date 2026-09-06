@@ -3,4 +3,6 @@ playback_node:
   ros__parameters:
     output_device: "default"
     mock_audio: false      # true = simulate playback without a speaker (dev dry-run)
-    tick_ms: 50            # playback state-machine period; ~80% of it is written per tick
+    tick_ms: 40            # playback state-machine period
+    chunk_ratio: 1.2       # audio written per tick / period; must exceed 1 so the
+                           # device buffer stays filled (below 1 causes click gaps)
