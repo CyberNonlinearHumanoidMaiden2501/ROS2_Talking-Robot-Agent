@@ -55,8 +55,8 @@ Five logical nodes; models are stateless adapters, the brain owns all state:
 **M0 — Toolchain & skeleton.** ✅ done — commit `20f882d`.
 Install colcon/rosdep/ffmpeg/portaudio19-dev via `install_sudo.sh` (needs sudo). Venv via uv with `--system-site-packages` so it sees system ROS2 deps (lark) after sourcing `/opt/ros/jazzy/setup.bash` (PEP 668 forbids system pip). Git init + repo-local identity + `.gitignore` + initial commit; workspace skeleton; interfaces build. *Verified: colcon build passes, launch file starts all nodes as stubs.*
 
-**M1 — Voice I/O.** ✅ implemented; owner physical tests pending (see TEST_REPORT.md).
-Audio capture/playback (sounddevice via PipeWire "default" routing, mock mode for dev); Silero VAD + Qwen3-ASR 0.6B (GPU bf16) transcribing en/zh; Kokoro TTS (en repo + v1.1-zh repo, af_heart/zf_001); Play action with exact truncation reporting; duck mode. Dev-verified: VAD segmentation, TTS→ASR round-trip, playback truncation math, mock-mode full-stack launch. Remaining: owner confirms mic transcripts and speaker audio.
+**M1 — Voice I/O.** ✅ done — verified on hardware by the owner.
+Audio capture/playback (sounddevice via PipeWire "default" routing, mock mode for dev); Silero VAD sliding-window segmentation + Qwen3-ASR 0.6B batched context-prompted transcription (GPU bf16); Kokoro TTS (en repo + v1.1-zh repo, af_heart/zf_001); Play action with exact truncation reporting; duck/aec modes. Dev-verified round-trips, playback truncation math, mock-mode full-stack launch; owner verified mic transcripts and speaker audio (playback click fix: chunk_ratio > 1).
 
 **M2 — Conversation core.** Brain state machine + fast LLM + persona.yaml + conversation store; always-on trigger; barge-in with as-spoken truncation recording; bilingual replies. *Verify: natural full-loop conversation with the persona; interrupt mid-sentence and confirm the context reflects what was actually heard.*
 

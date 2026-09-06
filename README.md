@@ -40,7 +40,7 @@ Every milestone ends with a git commit.
 | # | Milestone | Status |
 |---|-----------|--------|
 | M0 | Toolchain, repo, interfaces, stub nodes | done |
-| M1 | Voice I/O: VAD + Qwen3-ASR + Kokoro TTS | implemented; owner tests pending |
+| M1 | Voice I/O: VAD + Qwen3-ASR + Kokoro TTS | done (verified on hardware) |
 | M2 | Conversation core: brain + fast LLM + persona + barge-in | pending |
 | M3 | Reasoning escalation + digital tools | pending |
 | M4 | Cosplay voice (GPT-SoVITS cloning) | pending |
